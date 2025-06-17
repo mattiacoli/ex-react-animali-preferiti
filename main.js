@@ -1,4 +1,3 @@
-
 const { createRoot } = ReactDOM;
 const { useState } = React;
 const { createPortal } = ReactDOM
@@ -23,51 +22,68 @@ const AnimalList = () => {
   const [animals, setAnimals] = useState([]);
   const [show, setShow] = useState(false);
   const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Handlers
-  const onConfirm = () => {
-    getAnimal(input)
-    setShow(false)
-    setInput('')
-  }
+  const addAnimal = async () => {
+    if (!input) return;
+    setIsLoading(true)
 
-  const showModal = () => {
-    setShow(true)
-  }
+    try {
+      const response = await fetch(`http://localhost:3333/animals?search=${input}`)
+      const [animal] = await response.json()
 
-  const onClose = () => {
-    setShow(!show)
-    setInput('')
-  }
+      if (!animal) {
+        throw new Error('Nessun animale trovato')
+      }
+      const userAnimal = {
+        name: animal.name || null,
+        description: animal.description || null,
+        image: animal.image || null
+      }
+      setAnimals(curr => [...curr, userAnimal])
+      console.log(animal);
 
-  // Function to get animal from input text
-  const getAnimal = (query) => {
-
-    const newAnimal = query
-    if (!animals.includes(newAnimal)) {
-      setAnimals([...animals, newAnimal])
-      setShow(true)
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setInput('')
+      setShow(false)
+      setIsLoading(false)
     }
-    return animals
   }
+
+
+
 
   // accordion markup
   return (
     <details>
       <summary>Animali</summary>
-      <ul>
-        {animals.map((a, index) => (<li key={index}>{a}</li>))}
-      </ul>
-      <button onClick={showModal}>Aggiungi Animale</button>
+      <div>
+        {animals.map((a, index) => (
+          <div key={index} className="card">
+            <h3>{a.name}</h3>
+            <p>{a.description}</p>
+            {a.image && <figure><image src={a.image} alt={a.name} /></figure>}
+          </div>
+        ))}
+      </div>
+      <button onClick={() => setShow(true)}>Aggiungi Animale</button>
       <Modal
         title='Aggiungi il tuo animale'
-        content={'Scrivi il tuo animale preferito'}
+        content={
+          <div>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            {isLoading && <p>caricamento ....</p>}
+          </div>
+        }
         show={show}
-        setShow={setShow}
-        onClose={onClose}
-        onConfirm={onConfirm}
-        setInput={setInput}
-        value={input}
+        onClose={() => setShow(false)}
+        onConfirm={addAnimal}
       />
 
     </details>
@@ -87,8 +103,6 @@ function Modal({
   show,
   onClose,
   onConfirm,
-  setInput,
-  value,
 }) {
 
 
@@ -96,11 +110,7 @@ function Modal({
     <div className="modal-container">
       <div className="modal">
         <h2>{title}</h2>
-        <p>{content}</p>
-        <input
-          type='text'
-          value={value}
-          onChange={(e) => { setInput(e.target.value) }} />
+        {content}
         <button onClick={onConfirm}>Conferma</button>
         <button onClick={onClose}>Annulla</button>
       </div>
